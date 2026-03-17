@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>タイピングのマスターになろう。</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;900&family=Quicksand:wght@400;700&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Quicksand', 'M PLUS Rounded 1c', sans-serif; 
+            background-color: #F5F2ED;
+            color: #1A1A1A;
+        }
+        .font-serif { font-family: 'M PLUS Rounded 1c', serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useCallback, useRef } = React;
+        const { motion, AnimatePresence } = Motion;
+
+        const LANGUAGES = [
+            { code: 'ja', name: 'Japanese', native: '日本語' },
+            { code: 'en', name: 'English', native: 'English' },
+        ];
+
+        const TYPING_WORDS = {
+            ja: [
+                { kanji: "今日はとても良い天気ですね", kana: "きょうはとてもよいてんきですね" },
+                { kanji: "お腹が空いたので寿司を食べます", kana: "おなかがすいたのですしをたべます" },
+                { kanji: "私は毎日タイピングの練習をします", kana: "わたしはまいにちたいぴんぐのれんしゅうをします" },
+                { kanji: "早く正確に打てるようになりたい", kana: "はやくせいかくにうてるようになりたい" },
+                { kanji: "回転寿司でお腹いっぱい食べたい", kana: "かいてんずしでおなかいっぱいたべたい" },
+                { kanji: "英語の勉強も頑張っています", kana: "えいごのべんきょうもがんばっています" },
+                { kanji: "富士山は日本で一番高い山です", kana: "ふじさんはにほんでいちばんたかいやまです" },
+                { kanji: "美味しいお茶を飲んでリラックス", kana: "おいしいおちゃをのんでりらっくす" },
+                { kanji: "明日の予定を確認しておきましょう", kana: "あしたのよていをかくにんしておきましょう" },
+                { kanji: "図書館で静かに本を読みます", kana: "としょかんでしずかにほんをよみます" },
+            ],
+            en: [
+                { kanji: "The quick brown fox jumps over the lazy dog", kana: "The quick brown fox jumps over the lazy dog" },
+                { kanji: "I love eating fresh sushi at the restaurant", kana: "I love eating fresh sushi at the restaurant" },
+                { kanji: "Practice makes perfect when it comes to typing", kana: "Practice makes perfect when it comes to typing" },
+                { kanji: "The weather is beautiful and sunny today", kana: "The weather is beautiful and sunny today" },
+                { kanji: "I want to travel around the world someday", kana: "I want to travel around the world someday" },
+                { kanji: "Learning a new language is a great adventure", kana: "Learning a new language is a great adventure" },
+            ],
+        };
+
+        const UI_TRANSLATIONS = {
+            ja: {
+                title: "タイピングのマスターになろう。",
+                ready: "準備はいいですか？",
+                description: "流れてくるお皿の言葉をタイピングして、正確さとスピードを競いましょう。",
+                start60: "60秒コースで開始",
+                start90: "90秒コースで開始",
+                timeLeft: "残り時間",
+                score: "スコア",
+                results: "結果発表",
+                totalScore: "合計スコア",
+                platesEaten: "クリアした単語",
+                accuracy: "正確率",
+                mistakes: "ミス数",
+                tipsTitle: "上達のコツ",
+                retry: "もう一度挑戦する",
+                ptsUnit: "pts",
+            },
+            en: {
+                title: "Become a Typing Master",
+                ready: "Ready to Type?",
+                description: "Type the words on the flowing plates quickly and accurately.",
+                start60: "Start 60s Course",
+                start90: "Start 90s Course",
+                timeLeft: "Time Left",
+                score: "Score",
+                results: "Game Results",
+                totalScore: "Total Score",
+                platesEaten: "Words Cleared",
+                accuracy: "Accuracy",
+                mistakes: "Mistakes",
+                tipsTitle: "Typing Tips",
+                retry: "Try Again",
+                ptsUnit: "pts",
+            },
+        };
+
+        const TYPING_TIPS = {
+            ja: [
+                "ホームポジション（ASDF JKL;）を意識しましょう。",
+                "キーボードを見ずに画面を見る「タッチタイピング」が重要です。",
+                "最初は速さよりも正確さを重視しましょう。",
+                "姿勢を正しく保つことで、疲れにくくなります。",
+            ],
+            en: [
+                "Keep your fingers on the home row (ASDF JKL;).",
+                "Try touch typing without looking at the keyboard.",
+                "Focus on accuracy first, speed will follow.",
+                "Maintain good posture to avoid fatigue.",
+            ],
+        };
+
+        const KANA_MAP = {
+            'あ': ['a'], 'い': ['i', 'yi'], 'う': ['u', 'wu'], 'え': ['e'], 'お': ['o'],
+            'か': ['ka'], 'き': ['ki'], 'く': ['ku', 'qu'], 'け': ['ke'], 'こ': ['ko'],
+            'さ': ['sa'], 'し': ['shi', 'si'], 'す': ['su'], 'せ': ['se'], 'そ': ['so'],
+            'た': ['ta'], 'ち': ['chi', 'ti'], 'つ': ['tsu', 'tu'], 'て': ['te'], 'と': ['to'],
+            'な': ['na'], 'に': ['ni'], 'ぬ': ['nu'], 'ね': ['ne'], 'の': ['no'],
+            'は': ['ha'], 'ひ': ['hi'], 'ふ': ['fu', 'hu'], 'へ': ['he'], 'ほ': ['ho'],
+            'ま': ['ma'], 'み': ['mi'], 'む': ['mu'], 'め': ['me'], 'も': ['mo'],
+            'や': ['ya'], 'ゆ': ['yu'], 'よ': ['yo'],
+            'ら': ['ra'], 'り': ['ri'], 'る': ['ru'], 'れ': ['re'], 'ろ': ['ro'],
+            'わ': ['wa'], 'を': ['wo'], 'ん': ['nn', 'n', 'xn'],
+            'が': ['ga'], 'ぎ': ['gi'], 'ぐ': ['gu'], 'げ': ['ge'], 'ご': ['go'],
+            'ざ': ['za'], 'じ': ['ji', 'zi'], 'ず': ['zu'], 'ぜ': ['ze'], 'ぞ': ['zo'],
+            'だ': ['da'], 'ぢ': ['di'], 'づ': ['du'], 'で': ['de'], 'ど': ['do'],
+            'ば': ['ba'], 'び': ['bi'], 'ぶ': ['bu'], 'べ': ['be'], 'ぼ': ['bo'],
+            'ぱ': ['pa'], 'ぴ': ['pi'], 'ぷ': ['pu'], 'ぺ': ['pe'], 'ぽ': ['po'],
+            'きゃ': ['kya'], 'きゅ': ['kyu'], 'きょ': ['kyo'],
+            'しゃ': ['sha', 'sya'], 'しゅ': ['shu', 'syu'], 'しょ': ['sho', 'syo'],
+            'ちゃ': ['cha', 'tya'], 'ちゅ': ['chu', 'tyu'], 'ちょ': ['cho', 'tyo'],
+            'にゃ': ['nya'], 'にゅ': ['nyu'], 'にょ': ['nyo'],
+            'ひゃ': ['hya'], 'ひゅ': ['hyu'], 'ひょ': ['hyo'],
+            'みゃ': ['mya'], 'みゅ': ['myu'], 'みょ': ['myo'],
+            'りゃ': ['rya'], 'りゅ': ['ryu'], 'りょ': ['ryo'],
+            'ぎゃ': ['gya'], 'ぎゅ': ['gyu'], 'ぎょ': ['gyo'],
+            'じゃ': ['ja', 'zya'], 'じゅ': ['ju', 'zyu'], 'じょ': ['jo', 'zyo'],
+            'びゃ': ['bya'], 'びゅ': ['byu'], 'びょ': ['byo'],
+            'ぴゃ': ['pya'], 'ぴゅ': ['pyu'], 'ぴょ': ['pyo'],
+            'ぁ': ['xa', 'la'], 'ぃ': ['xi', 'li'], 'ぅ': ['xu', 'lu'], 'ぇ': ['xe', 'le'], 'ぉ': ['xo', 'lo'],
+            'ゃ': ['xya', 'lya'], 'ゅ': ['xyu', 'lyu'], 'ょ': ['xyo', 'lyo'],
+            'っ': ['xtu', 'ltu', 'xtsu'],
+            'ー': ['-'], ' ': [' '], '、': [','], '。': ['.'], '！': ['!'], '？': ['?'],
+        };
+
+        const SMALL_TSU = 'っ';
+
+        class TypingEngine {
+            constructor(kana, isDirectMode = false) {
+                this.kana = kana;
+                this.isDirectMode = isDirectMode;
+                this.currentKanaIndex = 0;
+                this.currentRomajiBuffer = '';
+                this.typedRomaji = '';
+                this.activeRomaji = isDirectMode ? kana : this.getDefaultRomaji();
+            }
+
+            getRemainingKana() { return this.kana.substring(this.currentKanaIndex); }
+            getTypedRomaji() { return this.typedRomaji; }
+            getActiveRomaji() { return this.activeRomaji; }
+
+            input(key) {
+                const lowerKey = key.toLowerCase();
+                const remaining = this.getRemainingKana();
+                if (remaining.length === 0) return false;
+
+                if (this.isDirectMode) {
+                    if (remaining.toLowerCase().startsWith(lowerKey)) {
+                        this.currentKanaIndex += key.length;
+                        this.typedRomaji += key;
+                        this.activeRomaji = this.typedRomaji + this.getRemainingKana();
+                        return true;
+                    }
+                    return false;
+                }
+
+                // 1. Try to match current buffer + new key against possible romaji sequences
+                for (let len = 2; len >= 1; len--) {
+                    if (remaining.length < len) continue;
+                    const part = remaining.substring(0, len);
+                    const possibleRomajis = KANA_MAP[part] ? [...KANA_MAP[part]] : [];
+
+                    // Special handling for "っ" (small tsu)
+                    if (part === SMALL_TSU && remaining.length > 1) {
+                        const nextKana = remaining.substring(1, 2);
+                        const nextRomajis = KANA_MAP[nextKana];
+                        if (nextRomajis) {
+                            const doubleConsonant = nextRomajis[0][0];
+                            if (!['a', 'i', 'u', 'e', 'o'].includes(doubleConsonant)) {
+                                possibleRomajis.push(doubleConsonant);
+                            }
+                        }
+                    }
+
+                    for (const romaji of possibleRomajis) {
+                        // "ん" (n) special rule: only allowed if next is not vowel/y/n
+                        if (part === 'ん' && romaji === 'n') {
+                            const nextPart = remaining.substring(len, len + 1);
+                            if (nextPart) {
+                                const nextRomajis = KANA_MAP[nextPart];
+                                if (nextRomajis) {
+                                    const nextFirstChar = nextRomajis[0][0];
+                                    if (['a', 'i', 'u', 'e', 'o', 'y', 'n'].includes(nextFirstChar)) {
+                                        continue; // Must use "nn"
+                                    }
+                                }
+                            } else {
+                                continue; // End of word must use "nn"
+                            }
+                        }
+
+                        const newBuffer = this.currentRomajiBuffer + lowerKey;
+                        if (romaji.startsWith(newBuffer)) {
+                            this.currentRomajiBuffer = newBuffer;
+                            this.typedRomaji += lowerKey;
+                            
+                            if (this.currentRomajiBuffer === romaji) {
+                                this.currentKanaIndex += len;
+                                this.currentRomajiBuffer = '';
+                            }
+                            
+                            // Update activeRomaji hint
+                            const head = this.typedRomaji;
+                            const currentTail = this.currentRomajiBuffer ? romaji.substring(this.currentRomajiBuffer.length) : '';
+                            const restTail = this.getTailRomaji(this.currentKanaIndex);
+                            this.activeRomaji = head + currentTail + restTail;
+                            return true;
+                        }
+                    }
+                }
+
+                // 2. Fallback: If current buffer already forms a complete kana, commit it and retry new key
+                if (this.currentRomajiBuffer.length > 0) {
+                    for (let len = 2; len >= 1; len--) {
+                        if (remaining.length < len) continue;
+                        const part = remaining.substring(0, len);
+                        const possibleRomajis = KANA_MAP[part] || [];
+                        if (possibleRomajis.includes(this.currentRomajiBuffer)) {
+                            this.currentKanaIndex += len;
+                            this.currentRomajiBuffer = '';
+                            return this.input(key);
+                        }
+                    }
+                }
+
+                return false;
+            }
+
+            getTailRomaji(startIndex) {
+                let result = '';
+                let i = startIndex;
+                while (i < this.kana.length) {
+                    let found = false;
+                    for (let len = 2; len >= 1; len--) {
+                        if (i + len > this.kana.length) continue;
+                        const part = this.kana.substring(i, i + len);
+                        if (KANA_MAP[part]) {
+                            result += KANA_MAP[part][0];
+                            i += len;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        if (this.kana[i] === SMALL_TSU && i + 1 < this.kana.length) {
+                            const nextPart = this.kana.substring(i + 1, i + 2);
+                            if (KANA_MAP[nextPart]) {
+                                result += KANA_MAP[nextPart][0][0];
+                            }
+                        }
+                        i++;
+                    }
+                }
+                return result;
+            }
+
+            isComplete() { return this.currentKanaIndex >= this.kana.length; }
+            getDefaultRomaji() { return this.getTailRomaji(0); }
+        }
+
+        function App() {
+            const [gameState, setGameState] = useState('START');
+            const [timeLimit, setTimeLimit] = useState(60);
+            const [timeLeft, setTimeLeft] = useState(60);
+            const [score, setScore] = useState(0);
+            const [clearedCount, setClearedCount] = useState(0);
+            const [missCount, setMissCount] = useState(0);
+            const [totalTyped, setTotalTyped] = useState(0);
+            const [language, setLanguage] = useState('ja');
+            const [currentWord, setCurrentWord] = useState(null);
+            const [tip, setTip] = useState('');
+
+            const engineRef = useRef(null);
+            const audioContextRef = useRef(null);
+            const recentlyUsedRef = useRef([]);
+
+            const initAudio = () => {
+                if (!audioContextRef.current) {
+                    audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            };
+
+            const playSound = (type) => {
+                if (!audioContextRef.current) return;
+                const ctx = audioContextRef.current;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                if (type === 'success') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(880, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.05);
+                    gain.gain.setValueAtTime(0.05, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
+                } else {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(150, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+                }
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.1);
+            };
+
+            const spawnWord = useCallback(() => {
+                const words = TYPING_WORDS[language];
+                let pool = words.filter(w => !recentlyUsedRef.current.includes(w.kanji));
+                if (pool.length === 0) pool = words;
+                const randomWord = pool[Math.floor(Math.random() * pool.length)];
+                recentlyUsedRef.current = [randomWord.kanji, ...recentlyUsedRef.current].slice(0, 5);
+                
+                const engine = new TypingEngine(randomWord.kana, language !== 'ja');
+                engineRef.current = engine;
+
+                setCurrentWord({
+                    id: Date.now(),
+                    word: randomWord,
+                    typed: '',
+                    active: engine.getActiveRomaji(),
+                });
+            }, [language]);
+
+            const handleMiss = useCallback(() => {
+                setMissCount(prev => prev + 1);
+                playSound('miss');
+                spawnWord();
+            }, [spawnWord]);
+
+            const startGame = (limit) => {
+                initAudio();
+                setTimeLimit(limit);
+                setTimeLeft(limit);
+                setScore(0);
+                setClearedCount(0);
+                setMissCount(0);
+                setTotalTyped(0);
+                recentlyUsedRef.current = [];
+                setGameState('PLAYING');
+                spawnWord();
+            };
+
+            const endGame = useCallback(() => {
+                setGameState('RESULT');
+                const tips = TYPING_TIPS[language];
+                setTip(tips[Math.floor(Math.random() * tips.length)]);
+            }, [language]);
+
+            useEffect(() => {
+                if (gameState !== 'PLAYING') return;
+                const handleKeyDown = (e) => {
+                    if (['Escape', 'Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) {
+                        if (e.key === 'Escape') endGame();
+                        return;
+                    }
+                    if (!engineRef.current || !currentWord) return;
+                    
+                    const success = engineRef.current.input(e.key);
+                    if (success) {
+                        setTotalTyped(prev => prev + 1);
+                        if (engineRef.current.isComplete()) {
+                            setScore(prev => prev + currentWord.word.kanji.length * 100);
+                            setClearedCount(prev => prev + 1);
+                            playSound('success');
+                            engineRef.current = null;
+                            setCurrentWord(null);
+                            spawnWord();
+                        } else {
+                            setCurrentWord(prev => ({
+                                ...prev,
+                                typed: engineRef.current.getTypedRomaji(),
+                                active: engineRef.current.getActiveRomaji(),
+                            }));
+                        }
+                    } else {
+                        setMissCount(prev => prev + 1);
+                        playSound('miss');
+                    }
+                };
+                window.addEventListener('keydown', handleKeyDown);
+                return () => window.removeEventListener('keydown', handleKeyDown);
+            }, [gameState, currentWord, spawnWord, endGame]);
+
+            useEffect(() => {
+                if (gameState !== 'PLAYING') return;
+                const timer = setInterval(() => {
+                    setTimeLeft(prev => {
+                        if (prev <= 1) { clearInterval(timer); endGame(); return 0; }
+                        return prev - 1;
+                    });
+                }, 1000);
+                return () => clearInterval(timer);
+            }, [gameState, endGame]);
+
+            const t = UI_TRANSLATIONS[language];
+
+            return (
+                <div className="min-h-screen bg-[#F5F2ED] text-[#1A1A1A]">
+                    <header className="p-6 border-b border-[#1A1A1A]/10 flex justify-between items-center bg-white/50 backdrop-blur-sm sticky top-0 z-50">
+                        <div className="flex items-center gap-6">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-[#FF6321] rounded-full flex items-center justify-center shadow-lg shadow-[#FF6321]/20">
+                                    <Zap className="text-white w-6 h-6" />
+                                </div>
+                                <h1 className="text-2xl font-bold tracking-tight font-serif italic">{t.title}</h1>
+                            </div>
+                            {gameState !== 'PLAYING' && (
+                                <div className="hidden lg:flex items-center gap-2 border-l border-[#1A1A1A]/10 pl-6">
+                                    {LANGUAGES.map(lang => (
+                                        <button
+                                            key={lang.code}
+                                            onClick={() => setLanguage(lang.code)}
+                                            className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-2 ${
+                                                language === lang.code
+                                                    ? 'bg-[#FF6321] text-white shadow-md shadow-[#FF6321]/10'
+                                                    : 'bg-[#1A1A1A]/5 hover:bg-[#1A1A1A]/10 text-[#1A1A1A]/60'
+                                            }`}
+                                        >
+                                            <span className="text-[10px]">{lang.native}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        {gameState === 'PLAYING' && (
+                            <div className="flex items-center gap-8">
+                                <div className="flex flex-col items-end">
+                                    <span className="text-[10px] uppercase tracking-widest font-bold text-[#1A1A1A]/40">{t.timeLeft}</span>
+                                    <div className="flex items-center gap-2 text-2xl font-mono font-bold">
+                                        <Timer className="w-5 h-5 text-[#FF6321]" />
+                                        {timeLeft}s
+                                    </div>
+                                </div>
+                                <div className="flex flex-col items-end">
+                                    <span className="text-[10px] uppercase tracking-widest font-bold text-[#1A1A1A]/40">{t.score}</span>
+                                    <div className="text-2xl font-mono font-bold text-[#FF6321]">
+                                        {score.toLocaleString()}<span className="text-xs ml-1 opacity-50">{t.ptsUnit}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </header>
+
+                    <main className="max-w-4xl mx-auto p-8">
+                        <AnimatePresence mode="wait">
+                            {gameState === 'START' && (
+                                <motion.div key="start" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} className="mt-10 text-center">
+                                    <div className="mb-12">
+                                        <h2 className="text-6xl font-black mb-4 font-serif italic">{t.ready}</h2>
+                                        <p className="text-[#1A1A1A]/60 max-w-md mx-auto">{t.description}</p>
+                                    </div>
+                                    <div className="flex flex-col gap-4 max-w-xs mx-auto">
+                                        <button onClick={() => startGame(60)} className="bg-[#1A1A1A] text-white py-4 px-8 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all hover:scale-105 active:scale-95 shadow-xl">
+                                            <Play className="w-5 h-5 fill-current" />
+                                            {t.start60}
+                                        </button>
+                                        <button onClick={() => startGame(90)} className="bg-white border-2 border-[#1A1A1A] py-4 px-8 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all hover:scale-105 active:scale-95">
+                                            <Play className="w-5 h-5" />
+                                            {t.start90}
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            {gameState === 'PLAYING' && (
+                                <motion.div key="playing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="relative h-[400px] w-full overflow-hidden bg-[#E4E3E0] rounded-[40px] border-4 border-[#1A1A1A]/5 shadow-inner">
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <AnimatePresence mode="wait">
+                                            {currentWord && (
+                                                <motion.div
+                                                    key={currentWord.id}
+                                                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                                    exit={{ opacity: 0, scale: 1.1, y: -20 }}
+                                                    transition={{ duration: 0.2 }}
+                                                    className="flex flex-col items-center"
+                                                >
+                                                    <div className="relative z-10 flex flex-col items-center mb-[-20px]">
+                                                        <div className="text-5xl font-bold font-serif mb-4 text-[#1A1A1A] drop-shadow-sm">{currentWord.word.kanji}</div>
+                                                        <div className="text-3xl font-mono font-bold tracking-widest flex bg-white/80 backdrop-blur-sm px-6 py-2 rounded-xl shadow-sm">
+                                                            <span className="text-[#FF6321]">{currentWord.typed}</span>
+                                                            <span className="text-[#1A1A1A]/20">
+                                                                {currentWord.active.substring(currentWord.typed.length)}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="relative w-[320px] h-[80px]">
+                                                        <div className="absolute inset-0 bg-gradient-to-b from-[#F2F2F2] to-[#D9D9D9] rounded-[100%] border-b-8 border-[#B3B3B3] shadow-xl"></div>
+                                                        <div className="absolute inset-[10%] bg-transparent border-2 border-[#FF6321]/20 rounded-[100%]"></div>
+                                                        <div className="absolute inset-0 flex justify-around items-center px-8 opacity-20">
+                                                            <div className="w-4 h-4 rounded-full bg-[#FF6321]"></div>
+                                                            <div className="w-4 h-4 rounded-full bg-[#FF6321]"></div>
+                                                            <div className="w-4 h-4 rounded-full bg-[#FF6321]"></div>
+                                                        </div>
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+                                    <div className="absolute bottom-[140px] left-0 w-full h-2 bg-[#1A1A1A]/10"></div>
+                                </motion.div>
+                            )}
+
+                            {gameState === 'RESULT' && (
+                                <motion.div key="result" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="mt-10">
+                                    <div className="bg-white rounded-[32px] p-12 shadow-2xl border border-[#1A1A1A]/5 relative overflow-hidden">
+                                        <div className="relative">
+                                            <div className="flex items-center gap-4 mb-8">
+                                                <Trophy className="w-10 h-10 text-[#FF6321]" />
+                                                <h2 className="text-4xl font-black font-serif italic">{t.results}</h2>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+                                                <div className="bg-[#F5F2ED] p-6 rounded-2xl">
+                                                    <span className="text-[10px] uppercase tracking-widest font-bold text-[#1A1A1A]/40 block mb-2">{t.totalScore}</span>
+                                                    <div className="text-4xl font-mono font-bold">{score.toLocaleString()} <span className="text-sm opacity-50">{t.ptsUnit}</span></div>
+                                                </div>
+                                                <div className="bg-[#F5F2ED] p-6 rounded-2xl">
+                                                    <span className="text-[10px] uppercase tracking-widest font-bold text-[#1A1A1A]/40 block mb-2">{t.accuracy}</span>
+                                                    <div className="text-4xl font-mono font-bold">
+                                                        {totalTyped + missCount > 0 ? Math.round((totalTyped / (totalTyped + missCount)) * 100) : 0}%
+                                                    </div>
+                                                </div>
+                                                <div className="bg-[#F5F2ED] p-6 rounded-2xl">
+                                                    <span className="text-[10px] uppercase tracking-widest font-bold text-[#1A1A1A]/40 block mb-2">{t.platesEaten}</span>
+                                                    <div className="text-4xl font-mono font-bold">{clearedCount}</div>
+                                                </div>
+                                                <div className="bg-[#F5F2ED] p-6 rounded-2xl">
+                                                    <span className="text-[10px] uppercase tracking-widest font-bold text-[#1A1A1A]/40 block mb-2">{t.mistakes}</span>
+                                                    <div className="text-4xl font-mono font-bold text-red-500">{missCount}</div>
+                                                </div>
+                                            </div>
+                                            <div className="bg-[#1A1A1A] text-white p-8 rounded-2xl mb-12 flex gap-6 items-start">
+                                                <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center shrink-0">
+                                                    <Lightbulb className="w-6 h-6 text-[#FF6321]" />
+                                                </div>
+                                                <div className="text-left">
+                                                    <h3 className="font-bold mb-2 flex items-center gap-2">{t.tipsTitle}</h3>
+                                                    <p className="text-white/70 leading-relaxed">{tip}</p>
+                                                </div>
+                                            </div>
+                                            <button onClick={() => setGameState('START')} className="w-full bg-[#1A1A1A] text-white py-5 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all hover:bg-[#1A1A1A]/90 active:scale-[0.98] shadow-xl">
+                                                <RefreshCcw className="w-5 h-5" />
+                                                {t.retry}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </main>
+
+                    <footer className="fixed bottom-0 left-0 w-full p-8 flex justify-between items-end pointer-events-none opacity-20">
+                        <div className="text-xs font-mono uppercase tracking-[0.2em]">Typing Master Pro v1.0</div>
+                        <div className="flex gap-4">
+                            <div className="w-12 h-1 bg-[#1A1A1A]" />
+                            <div className="w-24 h-1 bg-[#1A1A1A]" />
+                            <div className="w-8 h-1 bg-[#1A1A1A]" />
+                        </div>
+                    </footer>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+        
+        const Zap = ({ className }) => <i data-lucide="zap" className={className}></i>;
+        const Timer = ({ className }) => <i data-lucide="timer" className={className}></i>;
+        const Trophy = ({ className }) => <i data-lucide="trophy" className={className}></i>;
+        const RefreshCcw = ({ className }) => <i data-lucide="refresh-ccw" className={className}></i>;
+        const Play = ({ className }) => <i data-lucide="play" className={className}></i>;
+        const Lightbulb = ({ className }) => <i data-lucide="lightbulb" className={className}></i>;
+
+        setTimeout(() => {
+            if (window.lucide) lucide.createIcons();
+        }, 100);
+    </script>
+</body>
+</html>
