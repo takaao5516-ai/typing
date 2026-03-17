@@ -520,51 +520,77 @@
                                 </motion.div>
                             )}
 
-                            {gameState === 'RESULT' && (
-                                <motion.div key="result" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="mt-10">
-                                    <div className="bg-white rounded-[32px] p-12 shadow-2xl border border-[#1A1A1A]/5 relative overflow-hidden">
-                                        <div className="relative">
-                                            <div className="flex items-center gap-4 mb-8">
-                                                <Trophy className="w-10 h-10 text-[#FF6321]" />
-                                                <h2 className="text-4xl font-black font-serif italic">{t.results}</h2>
-                                            </div>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-                                                <div className="bg-[#F5F2ED] p-6 rounded-2xl">
-                                                    <span className="text-[10px] uppercase tracking-widest font-bold text-[#1A1A1A]/40 block mb-2">{t.totalScore}</span>
-                                                    <div className="text-4xl font-mono font-bold">{score.toLocaleString()} <span className="text-sm opacity-50">{t.ptsUnit}</span></div>
+                            {gameState === 'RESULT' && (() => {
+                                const getRank = (score, timeLimit) => {
+                                    const normalizedScore = score * (60 / timeLimit);
+                                    if (normalizedScore >= 18000) return { label: 'SSS', color: 'text-yellow-400', glow: 'shadow-[0_0_20px_rgba(250,204,21,0.5)]' };
+                                    if (normalizedScore >= 15000) return { label: 'SS', color: 'text-yellow-500', glow: '' };
+                                    if (normalizedScore >= 12000) return { label: 'S', color: 'text-orange-500', glow: '' };
+                                    if (normalizedScore >= 9000) return { label: 'A', color: 'text-[#FF6321]', glow: '' };
+                                    if (normalizedScore >= 6000) return { label: 'B', color: 'text-blue-500', glow: '' };
+                                    if (normalizedScore >= 4000) return { label: 'C', color: 'text-green-500', glow: '' };
+                                    if (normalizedScore >= 2000) return { label: 'D', color: 'text-gray-500', glow: '' };
+                                    return { label: 'E', color: 'text-gray-400', glow: '' };
+                                };
+                                const rank = getRank(score, timeLimit);
+                                return (
+                                    <motion.div key="result" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="mt-10">
+                                        <div className="bg-white rounded-[32px] p-12 shadow-2xl border border-[#1A1A1A]/5 relative overflow-hidden">
+                                            <div className="relative">
+                                                <div className="flex items-center gap-4 mb-8">
+                                                    <Trophy className="w-10 h-10 text-[#FF6321]" />
+                                                    <h2 className="text-4xl font-black font-serif italic">{t.results}</h2>
                                                 </div>
-                                                <div className="bg-[#F5F2ED] p-6 rounded-2xl">
-                                                    <span className="text-[10px] uppercase tracking-widest font-bold text-[#1A1A1A]/40 block mb-2">{t.accuracy}</span>
-                                                    <div className="text-4xl font-mono font-bold">
-                                                        {totalTyped + missCount > 0 ? Math.round((totalTyped / (totalTyped + missCount)) * 100) : 0}%
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+                                                    <div className="bg-[#F5F2ED] p-6 rounded-2xl md:col-span-2 flex items-center justify-between overflow-hidden relative">
+                                                        <div>
+                                                            <span className="text-[10px] uppercase tracking-widest font-bold text-[#1A1A1A]/40 block mb-1">{t.rank}</span>
+                                                            <div className={`text-7xl font-black font-serif italic ${rank.color} ${rank.glow} drop-shadow-sm`}>
+                                                                {rank.label}
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <span className="text-[10px] uppercase tracking-widest font-bold text-[#1A1A1A]/40 block mb-1">{t.totalScore}</span>
+                                                            <div className="text-4xl font-mono font-bold">{score.toLocaleString()} <span className="text-sm opacity-50">{t.ptsUnit}</span></div>
+                                                        </div>
+                                                        {/* Decorative background rank */}
+                                                        <div className={`absolute -right-4 -bottom-8 text-9xl font-black italic opacity-5 pointer-events-none select-none ${rank.color}`}>
+                                                            {rank.label}
+                                                        </div>
+                                                    </div>
+                                                    <div className="bg-[#F5F2ED] p-6 rounded-2xl">
+                                                        <span className="text-[10px] uppercase tracking-widest font-bold text-[#1A1A1A]/40 block mb-2">{t.accuracy}</span>
+                                                        <div className="text-4xl font-mono font-bold">
+                                                            {totalTyped + missCount > 0 ? Math.round((totalTyped / (totalTyped + missCount)) * 100) : 0}%
+                                                        </div>
+                                                    </div>
+                                                    <div className="bg-[#F5F2ED] p-6 rounded-2xl">
+                                                        <span className="text-[10px] uppercase tracking-widest font-bold text-[#1A1A1A]/40 block mb-2">{t.platesEaten}</span>
+                                                        <div className="text-4xl font-mono font-bold">{clearedCount}</div>
+                                                    </div>
+                                                    <div className="bg-[#F5F2ED] p-6 rounded-2xl md:col-span-2">
+                                                        <span className="text-[10px] uppercase tracking-widest font-bold text-[#1A1A1A]/40 block mb-2">{t.mistakes}</span>
+                                                        <div className="text-4xl font-mono font-bold text-red-500">{missCount}</div>
                                                     </div>
                                                 </div>
-                                                <div className="bg-[#F5F2ED] p-6 rounded-2xl">
-                                                    <span className="text-[10px] uppercase tracking-widest font-bold text-[#1A1A1A]/40 block mb-2">{t.platesEaten}</span>
-                                                    <div className="text-4xl font-mono font-bold">{clearedCount}</div>
+                                                <div className="bg-[#1A1A1A] text-white p-8 rounded-2xl mb-12 flex gap-6 items-start">
+                                                    <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center shrink-0">
+                                                        <Lightbulb className="w-6 h-6 text-[#FF6321]" />
+                                                    </div>
+                                                    <div className="text-left">
+                                                        <h3 className="font-bold mb-2 flex items-center gap-2">{t.tipsTitle}</h3>
+                                                        <p className="text-white/70 leading-relaxed">{tip}</p>
+                                                    </div>
                                                 </div>
-                                                <div className="bg-[#F5F2ED] p-6 rounded-2xl">
-                                                    <span className="text-[10px] uppercase tracking-widest font-bold text-[#1A1A1A]/40 block mb-2">{t.mistakes}</span>
-                                                    <div className="text-4xl font-mono font-bold text-red-500">{missCount}</div>
-                                                </div>
+                                                <button onClick={() => setGameState('START')} className="w-full bg-[#1A1A1A] text-white py-5 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all hover:bg-[#1A1A1A]/90 active:scale-[0.98] shadow-xl">
+                                                    <RefreshCcw className="w-5 h-5" />
+                                                    {t.retry}
+                                                </button>
                                             </div>
-                                            <div className="bg-[#1A1A1A] text-white p-8 rounded-2xl mb-12 flex gap-6 items-start">
-                                                <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center shrink-0">
-                                                    <Lightbulb className="w-6 h-6 text-[#FF6321]" />
-                                                </div>
-                                                <div className="text-left">
-                                                    <h3 className="font-bold mb-2 flex items-center gap-2">{t.tipsTitle}</h3>
-                                                    <p className="text-white/70 leading-relaxed">{tip}</p>
-                                                </div>
-                                            </div>
-                                            <button onClick={() => setGameState('START')} className="w-full bg-[#1A1A1A] text-white py-5 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all hover:bg-[#1A1A1A]/90 active:scale-[0.98] shadow-xl">
-                                                <RefreshCcw className="w-5 h-5" />
-                                                {t.retry}
-                                            </button>
                                         </div>
-                                    </div>
-                                </motion.div>
-                            )}
+                                    </motion.div>
+                                );
+                            })()}
                         </AnimatePresence>
                     </main>
 
